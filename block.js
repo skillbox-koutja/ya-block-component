@@ -102,32 +102,12 @@ class Block {
     // Такой способ больше не применяется с приходом ES6+
     const self = this;
 
-    const createBufferedSetter = function () {
-      let timerId;
-      let bufferProps = {};
-      return function (target, newProps) {
-        if (timerId) {
-          clearTimeout(timerId);
-        }
-        bufferProps = {...bufferProps, ...newProps};
-        timerId = setTimeout(function () {
-          const oldProps = {...target};
-          for (const [key, value] of Object.entries(bufferProps)) {
-            target[key] = value;
-          }
-          self.eventBus().emit(Block.EVENTS.FLOW_CDU, oldProps, bufferProps);
-
-          bufferProps = {};
-        }, 0);
-      };
-    };
-
-    const setter = createBufferedSetter();
-
     return new Proxy(props, {
       set(oldProps, prop, value) {
-        const newProps = {[prop]: value};
-        setter(oldProps, newProps);
+        const temp = {...oldProps};
+        const newProps = {...oldProps, [prop]: value};
+        oldProps[prop] = value;
+        self.eventBus().emit(Block.EVENTS.FLOW_CDU, temp, newProps);
         return true;
       },
       deleteProperty() {
